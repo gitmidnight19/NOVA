@@ -1,162 +1,213 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12 px-4">
-    <div class="max-w-4xl mx-auto">
-      <!-- Header -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="flex items-center space-x-4">
-          <img 
-            v-if="user?.avatar" 
-            :src="user.avatar" 
-            alt="Avatar"
-            class="w-24 h-24 rounded-full"
-          />
-          <div 
-            v-else
-            class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-300 to-purple-400 flex items-center justify-center text-white text-4xl font-bold"
-          >
-            {{ user?.name?.charAt(0).toUpperCase() }}
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Mi Perfil</h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Menú lateral -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-white text-2xl font-bold">
+                {{ authStore.user?.name?.charAt(0).toUpperCase() }}
+              </span>
+            </div>
+            <h2 class="font-bold text-lg">{{ authStore.user?.name }}</h2>
+            <p class="text-gray-500 text-sm">{{ authStore.user?.email }}</p>
           </div>
-          <div>
-            <h1 class="text-3xl font-bold text-gray-800">{{ user?.name }}</h1>
-            <p class="text-gray-600">{{ user?.email }}</p>
-            <span 
-              class="inline-block mt-2 px-3 py-1 rounded-full text-sm font-semibold"
-              :class="user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'"
+
+          <nav class="space-y-2">
+            <button
+              @click="activeTab = 'info'"
+              :class="[
+                'w-full text-left px-4 py-2 rounded-lg transition',
+                activeTab === 'info' ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100'
+              ]"
             >
-              {{ user?.role === 'admin' ? '👑 Administrador' : '👤 Usuario' }}
-            </span>
-          </div>
+              Información Personal
+            </button>
+            <button
+              @click="activeTab = 'password'"
+              :class="[
+                'w-full text-left px-4 py-2 rounded-lg transition',
+                activeTab === 'password' ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100'
+              ]"
+            >
+              Cambiar Contraseña
+            </button>
+            <router-link
+              to="/orders"
+              class="block w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100"
+            >
+              Mis Pedidos
+            </router-link>
+            <button
+              @click="handleLogout"
+              class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50"
+            >
+              Cerrar Sesión
+            </button>
+          </nav>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="flex border-b">
-          <button
-            @click="activeTab = 'info'"
-            :class="activeTab === 'info' ? 'bg-pink-100 text-pink-700 border-b-2 border-pink-500' : 'text-gray-600'"
-            class="flex-1 py-4 px-6 font-semibold transition"
-          >
-            📋 Información Personal
-          </button>
-          <button
-            @click="activeTab = 'security'"
-            :class="activeTab === 'security' ? 'bg-pink-100 text-pink-700 border-b-2 border-pink-500' : 'text-gray-600'"
-            class="flex-1 py-4 px-6 font-semibold transition"
-          >
-            🔒 Seguridad
-          </button>
-        </div>
+      <!-- Contenido -->
+      <div class="lg:col-span-2">
+        <!-- Información Personal -->
+        <div v-if="activeTab === 'info'" class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-bold mb-6">Información Personal</h2>
 
-        <div class="p-6">
-          <!-- Información Personal -->
-          <div v-if="activeTab === 'info'" class="space-y-4">
+          <form @submit.prevent="updateProfile" class="space-y-4">
+            <div v-if="successMessage" class="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
+              {{ successMessage }}
+            </div>
+
+            <div v-if="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+              {{ error }}
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
-              <input 
-                v-model="editableUser.name"
+              <input
+                v-model="profileForm.name"
                 type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
-              <input 
-                v-model="editableUser.email"
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                :value="authStore.user?.email"
                 type="email"
                 disabled
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
               />
-              <p class="text-xs text-gray-500 mt-1">El email no se puede cambiar</p>
+              <p class="text-xs text-gray-500 mt-1">El email no se puede modificar</p>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-              <input 
-                v-model="editableUser.phone"
+              <input
+                v-model="profileForm.phone"
                 type="tel"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-              <textarea 
-                v-model="editableUser.address"
-                rows="3"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
-              ></textarea>
+              <input
+                v-model="profileForm.address.street"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Calle 123 # 45-67"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                <input
+                  v-model="profileForm.address.city"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+                <input
+                  v-model="profileForm.address.state"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Código Postal</label>
+                <input
+                  v-model="profileForm.address.zipCode"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                <input
+                  v-model="profileForm.address.country"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
             </div>
 
             <button
-              @click="updateProfile"
-              :disabled="updating"
-              class="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50"
+              type="submit"
+              :disabled="loading"
+              class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
             >
-              {{ updating ? 'Actualizando...' : '💾 Guardar Cambios' }}
+              <span v-if="loading">Guardando...</span>
+              <span v-else>Guardar Cambios</span>
             </button>
+          </form>
+        </div>
 
-            <p v-if="updateMessage" class="text-center text-green-600 font-semibold">{{ updateMessage }}</p>
-          </div>
+        <!-- Cambiar Contraseña -->
+        <div v-if="activeTab === 'password'" class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-bold mb-6">Cambiar Contraseña</h2>
 
-          <!-- Seguridad -->
-          <div v-if="activeTab === 'security'" class="space-y-4">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <p class="text-sm text-yellow-800">
-                <span class="font-semibold">⚠️ Nota:</span> 
-                {{ user?.authProvider === 'google' 
-                  ? 'Iniciaste sesión con Google. No necesitas contraseña.' 
-                  : 'Puedes cambiar tu contraseña aquí.'
-                }}
-              </p>
+          <form @submit.prevent="changePassword" class="space-y-4">
+            <div v-if="successMessage" class="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
+              {{ successMessage }}
             </div>
 
-            <div v-if="user?.authProvider === 'local'">
+            <div v-if="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+              {{ error }}
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña actual</label>
-              <input 
-                v-model="passwordData.current"
+              <input
+                v-model="passwordForm.currentPassword"
                 type="password"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
-            <div v-if="user?.authProvider === 'local'">
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-              <input 
-                v-model="passwordData.new"
+              <input
+                v-model="passwordForm.newPassword"
                 type="password"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                required
+                minlength="6"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
-            <div v-if="user?.authProvider === 'local'">
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar nueva contraseña</label>
-              <input 
-                v-model="passwordData.confirm"
+              <input
+                v-model="passwordForm.confirmPassword"
                 type="password"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                required
+                minlength="6"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
 
             <button
-              v-if="user?.authProvider === 'local'"
-              @click="changePassword"
-              class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-4 rounded-lg transition"
+              type="submit"
+              :disabled="loading"
+              class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
             >
-              🔑 Cambiar Contraseña
+              <span v-if="loading">Cambiando...</span>
+              <span v-else>Cambiar Contraseña</span>
             </button>
-
-            <div class="mt-8 pt-8 border-t">
-              <h3 class="text-lg font-semibold text-gray-800 mb-4">Zona Peligrosa</h3>
-              <button
-                @click="deleteAccount"
-                class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition"
-              >
-                🗑️ Eliminar Cuenta
-              </button>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
@@ -164,85 +215,102 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../store/auth';
+import api from '../services/api';
 
-const { user, getAuthHeaders, logout } = useAuth()
-const router = useRouter()
+const router = useRouter();
+const authStore = useAuthStore();
 
-const activeTab = ref('info')
-const updating = ref(false)
-const updateMessage = ref('')
+const activeTab = ref('info');
+const loading = ref(false);
+const error = ref(null);
+const successMessage = ref(null);
 
-const editableUser = reactive({
+const profileForm = ref({
   name: '',
-  email: '',
   phone: '',
-  address: ''
-})
-
-const passwordData = reactive({
-  current: '',
-  new: '',
-  confirm: ''
-})
-
-onMounted(async () => {
-  if (user.value) {
-    editableUser.name = user.value.name || ''
-    editableUser.email = user.value.email || ''
-    editableUser.phone = user.value.phone || ''
-    editableUser.address = user.value.address || ''
-  } else {
-    await router.push('/login')
+  address: {
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Colombia'
   }
-})
+});
+
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
+
+onMounted(() => {
+  if (authStore.user) {
+    profileForm.value.name = authStore.user.name || '';
+    profileForm.value.phone = authStore.user.phone || '';
+    if (authStore.user.address) {
+      profileForm.value.address = { ...authStore.user.address };
+    }
+  }
+});
 
 const updateProfile = async () => {
-  updating.value = true
-  updateMessage.value = ''
-
   try {
-    const response = await fetch('http://localhost:3000/api/auth/profile', {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(editableUser)
-    })
+    loading.value = true;
+    error.value = null;
+    successMessage.value = null;
 
-    const data = await response.json()
+    await authStore.updateProfile(profileForm.value);
+    successMessage.value = 'Perfil actualizado correctamente';
 
-    if (response.ok) {
-      Object.assign(user.value, editableUser)
-      localStorage.setItem('user', JSON.stringify(user.value))
-      updateMessage.value = '✅ Perfil actualizado correctamente'
-      setTimeout(() => (updateMessage.value = ''), 3000)
-    } else {
-      alert(data.error || 'Error al actualizar perfil')
-    }
-  } catch (error) {
-    console.error('Error:', error)
-    alert('Error de conexión')
+    setTimeout(() => {
+      successMessage.value = null;
+    }, 3000);
+  } catch (err) {
+    error.value = 'Error al actualizar el perfil';
   } finally {
-    updating.value = false
+    loading.value = false;
   }
-}
+};
 
-const changePassword = () => {
-  if (passwordData.new !== passwordData.confirm) {
-    alert('Las contraseñas no coinciden')
-    return
-  }
-  if (passwordData.new.length < 6) {
-    alert('La contraseña debe tener al menos 6 caracteres')
-    return
-  }
-  alert('Funcionalidad de cambio de contraseña - implementar en backend')
-}
+const changePassword = async () => {
+  try {
+    loading.value = true;
+    error.value = null;
+    successMessage.value = null;
 
-const deleteAccount = () => {
-  if (confirm('⚠️ ¿Estás seguro? Esta acción no se puede deshacer.')) {
-    alert('Funcionalidad de eliminar cuenta - implementar en backend')
+    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+      error.value = 'Las contraseñas no coinciden';
+      loading.value = false;
+      return;
+    }
+
+    await api.changePassword({
+      currentPassword: passwordForm.value.currentPassword,
+      newPassword: passwordForm.value.newPassword
+    });
+
+    successMessage.value = 'Contraseña cambiada correctamente';
+    passwordForm.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+
+    setTimeout(() => {
+      successMessage.value = null;
+    }, 3000);
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Error al cambiar la contraseña';
+  } finally {
+    loading.value = false;
   }
-}
+};
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push('/');
+};
 </script>

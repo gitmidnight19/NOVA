@@ -1,98 +1,115 @@
 // src/composables/useAuth.js
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue'
 
-// Estado global compartido (fuera de la función para que persista)
-const user = ref(null);
-const token = ref(null);
-const isAuthenticated = ref(false);
+// ============================================
+// ESTADO GLOBAL (compartido entre componentes)
+// ============================================
+const user = ref(null)
+const token = ref(null)
+const loading = ref(false)
 
-// Inicializar desde localStorage INMEDIATAMENTE
-const savedToken = localStorage.getItem('token');
-const savedUser = localStorage.getItem('user');
+// ============================================
+// INICIALIZAR desde localStorage
+// ============================================
+function initAuth() {
+  const savedToken = localStorage.getItem('token')
+  const savedUser = localStorage.getItem('user')
 
-if (savedToken && savedUser) {
-  try {
-    token.value = savedToken;
-    user.value = JSON.parse(savedUser);
-    isAuthenticated.value = true;
-    console.log('✅ Usuario cargado desde localStorage:', user.value);
-  } catch (error) {
-    console.error('❌ Error parseando usuario:', error);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  if (savedToken && savedUser) {
+    try {
+      token.value = savedToken
+      user.value = JSON.parse(savedUser)
+      console.log('✅ Usuario restaurado:', user.value)
+    } catch (error) {
+      console.error('❌ Error al restaurar usuario:', error)
+      clearAuth()
+    }
   }
 }
 
+// Inicializar al cargar el módulo
+initAuth()
+
+// ============================================
+// LIMPIAR autenticación
+// ============================================
+function clearAuth() {
+  user.value = null
+  token.value = null
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
+
+// ============================================
+// COMPOSABLE
+// ============================================
 export function useAuth() {
-  // Login
-  const login = (userData, authToken) => {
-    console.log('🔐 Ejecutando login con:', userData);
-    
-    user.value = userData;
-    token.value = authToken;
-    isAuthenticated.value = true;
-    
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    
-    console.log('✅ Login completado. isAuthenticated:', isAuthenticated.value);
-    console.log('✅ User role:', user.value?.role);
-  };
+  // Computed properties
+  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAdmin = computed(() => user.value?.role === 'admin')
+  const userName = computed(() => user.value?.name || '')
+  const userEmail = computed(() => user.value?.email || '')
 
-  // Logout
-  const logout = () => {
-    console.log('🚪 Cerrando sesión...');
-    
-    user.value = null;
-    token.value = null;
-    isAuthenticated.value = false;
-    
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    
-    console.log('✅ Sesión cerrada');
-  };
+  // ============================================
+  // LOGIN
+  // ============================================
+  function login(userData, userToken) {
+    try {
+      console.log('🔐 Iniciando sesión con:', userData)
+      
+      // Guardar en estado reactivo
+      user.value = userData
+      token.value = userToken
 
-  // Verificar si es admin
-  const isAdmin = computed(() => {
-    const result = user.value?.role === 'admin';
-    console.log('🔍 isAdmin computed:', result, 'User:', user.value);
-    return result;
-  });
+      // Guardar en localStorage
+      localStorage.setItem('token', userToken)
+      localStorage.setItem('user', JSON.stringify(userData))
 
-  // Obtener headers con token
-  const getAuthHeaders = () => {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token.value}`
-    };
-  };
-
-  // Recargar usuario (útil después de actualizaciones)
-  const loadUser = () => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (savedToken && savedUser) {
-      try {
-        token.value = savedToken;
-        user.value = JSON.parse(savedUser);
-        isAuthenticated.value = true;
-        console.log('✅ Usuario recargado:', user.value);
-      } catch (error) {
-        console.error('❌ Error recargando usuario:', error);
-      }
+      console.log('✅ Login exitoso, usuario:', user.value)
+      console.log('✅ Token guardado:', !!token.value)
+      console.log('✅ isAuthenticated:', isAuthenticated.value)
+      
+      return true
+    } catch (error) {
+      console.error('❌ Error en login:', error)
+      return false
     }
-  };
+  }
 
+  // ============================================
+  // LOGOUT
+  // ============================================
+  function logout() {
+    console.log('👋 Cerrando sesión...')
+    clearAuth()
+    return true
+  }
+
+  // ============================================
+  // VERIFICAR SI HAY SESIÓN ACTIVA
+  // ============================================
+  function checkAuth() {
+    return isAuthenticated.value
+  }
+
+  // ============================================
+  // RETURN
+  // ============================================
   return {
+    // Estado
     user,
     token,
+    loading,
+    
+    // Computed
     isAuthenticated,
     isAdmin,
+    userName,
+    userEmail,
+    
+    // Métodos
     login,
     logout,
-    getAuthHeaders,
-    loadUser
-  };
+    checkAuth
+  }
 }
